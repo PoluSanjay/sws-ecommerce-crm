@@ -1,0 +1,9 @@
+node_modules/
+.npm-cache/
+dist/
+.env
+.env.local
+uploads/
+data/
+*.log
+coverage/

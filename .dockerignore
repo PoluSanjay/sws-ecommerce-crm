@@ -1,0 +1,10 @@
+node_modules
+.npm-cache
+apps/*/node_modules
+apps/*/dist
+.git
+.env
+uploads
+backups
+work
+outputs

@@ -1,0 +1,15 @@
+{
+  "name": "sujala-water-solutions",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=@sws/api\" \"npm run dev --workspace=@sws/web\"",
+    "build": "npm run build --workspace=@sws/api && npm run build --workspace=@sws/web",
+    "start": "npm run start --workspace=@sws/api",
+    "seed": "npm run seed --workspace=@sws/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@sws/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/seed.js",
+    "build": "node --check src/server.js && node --check src/models.js && node --check src/security.js && node --check src/helpers.js && node --check src/seed.js && node --check src/routes/auth.js && node --check src/routes/catalog.js && node --check src/routes/customer.js && node --check src/routes/admin-catalog.js && node --check src/routes/admin-core.js && node --check src/routes/technician.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "google-auth-library": "^10.9.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.3",
+    "multer": "^2.0.2",
+    "nodemailer": "^9.0.3",
+    "socket.io": "^4.8.1",
+    "zod": "^3.24.1"
+  }
+}
