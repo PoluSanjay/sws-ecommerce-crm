@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Bell, ChevronDown, Facebook, Headphones, Instagram, Menu, MessageCircle, Minus, Phone, Plus, Search, ShoppingBag, Trash2, UserRound, X, Youtube } from 'lucide-react';
 import { io } from 'socket.io-client';
@@ -28,13 +28,26 @@ export function Shell({ children }) {
 function Header({ account }) {
   const [open, setOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const accountMenu = useRef(null);
   const navigate = useNavigate();
   const { count } = useCart();
   const { logout } = useAuth();
   const role = account?.roles?.includes('admin') ? 'admin' : account?.roles?.includes('technician') ? 'technician' : 'customer';
   const portal = role === 'admin' ? '/admin' : role === 'technician' ? '/technician' : '/dashboard';
   const searchProducts = event => { event.preventDefault(); navigate({ to: '/products' }); if (search.trim()) setTimeout(() => document.getElementById('catalog-search')?.focus(), 50); };
+  useEffect(() => {
+    if (!accountOpen) return;
+    const closeOnOutsideClick = event => { if (!accountMenu.current?.contains(event.target)) setAccountOpen(false); };
+    const closeOnEscape = event => { if (event.key === 'Escape') setAccountOpen(false); };
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [accountOpen]);
   return <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-ink/90 backdrop-blur-xl">
     <div className="shell flex h-16 items-center justify-between gap-3">
       <Link to="/" aria-label="Sujala Water Solutions home"><Logo/></Link>
@@ -45,7 +58,7 @@ function Header({ account }) {
         <a className="grid h-9 w-9 place-items-center rounded-lg border border-line text-emerald-400 hover:bg-slate-800" title="WhatsApp SWS" href="https://wa.me/919949792248" target="_blank" rel="noreferrer"><Headphones size={17}/></a>
       </div>
       <button onClick={() => setCartOpen(true)} className="relative grid h-9 w-9 place-items-center rounded-lg border border-line hover:bg-slate-800" aria-label="Open cart"><ShoppingBag size={18}/>{count > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">{count}</span>}</button>
-      {account ? <div className="group relative hidden md:block"><button className="flex h-9 items-center gap-1 rounded-lg border border-line px-2 text-sm hover:bg-slate-800"><UserRound size={16}/><span className="max-w-24 truncate">{account.user.full_name.split(' ')[0]}</span><ChevronDown size={14}/></button><div className="invisible absolute right-0 top-full mt-2 w-44 rounded-xl border border-line bg-panel p-1 opacity-0 shadow-2xl transition group-hover:visible group-hover:opacity-100"><Link to={portal} className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-700">My workspace</Link>{role === 'admin' && <Link to="/admin/orders" className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-700">Order control</Link>}<button className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-slate-700" onClick={logout}>Sign out</button></div></div> : <Link to="/auth" className="btn btn-primary hidden px-3 py-2 text-sm md:inline-flex">Sign in</Link>}
+      {account ? <div ref={accountMenu} className="relative hidden md:block"><button type="button" aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => setAccountOpen(value => !value)} className="flex h-9 items-center gap-1 rounded-lg border border-line px-2 text-sm hover:bg-slate-800"><UserRound size={16}/><span className="max-w-24 truncate">{account.user.full_name.split(' ')[0]}</span><ChevronDown size={14}/></button><div role="menu" className={'absolute right-0 top-full mt-2 w-44 rounded-xl border border-line bg-panel p-1 shadow-2xl transition ' + (accountOpen ? 'visible opacity-100' : 'invisible opacity-0')}><Link to={portal} onClick={() => setAccountOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-700">My workspace</Link>{role === 'admin' && <Link to="/admin/orders" onClick={() => setAccountOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-700">Order control</Link>}<button type="button" className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-slate-700" onClick={() => { setAccountOpen(false); logout(); }}>Sign out</button></div></div> : <Link to="/auth" className="btn btn-primary hidden px-3 py-2 text-sm md:inline-flex">Sign in</Link>}
       <button className="grid h-9 w-9 place-items-center rounded-lg border border-line lg:hidden" onClick={() => setOpen(value => !value)} aria-label="Open menu">{open ? <X size={18}/> : <Menu size={18}/>}</button>
     </div>
     {open && <div className="border-t border-line bg-panel px-4 py-3 lg:hidden"><nav className="shell grid gap-1">{links.map(link => <Link key={link.to} to={link.to} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700">{link.label}</Link>)}{account ? <Link to={portal} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-light">My workspace</Link> : <Link to="/auth" className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-light">Sign in</Link>}</nav></div>}
