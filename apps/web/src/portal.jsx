@@ -52,10 +52,24 @@ export function AdminProducts() {
   const save = event => {
     event.preventDefault();
     if (!form.name.trim() || String(form.price).trim() === '') { toast('Name and price are required'); return; }
+    const skip = ['_id','images','category_id','is_active','is_featured','created_at','updated_at','__v'];
+    const numeric = ['price','discount_price','stock','rating'];
     const body = new FormData();
-    Object.entries(form).forEach(([key, value]) => { if (!['_id','images','category_id','is_active','is_featured','created_at','updated_at','__v'].includes(key)) body.append(key, value ?? ''); });
+    Object.entries(form).forEach(([key, value]) => {
+      if (skip.includes(key)) return;
+      // Empty strings make Mongoose throw "validation failed" on Number/Date/ObjectId paths — omit them.
+      if (value === '' || value === null || value === undefined) return;
+      if (numeric.includes(key)) {
+        const n = Number(value);
+        if (Number.isNaN(n)) return;
+        body.append(key, String(n));
+        return;
+      }
+      body.append(key, value);
+    });
     body.append('slug', form.slug || slugify(form.name));
-    body.append('category_id', form.category_id || '');
+    // Only send category_id when one is actually picked; '' is not a valid ObjectId.
+    if (form.category_id) body.append('category_id', form.category_id);
     body.append('is_active', String(form.is_active ?? true));
     body.append('is_featured', String(form.is_featured ?? false));
     body.append('existing_images', JSON.stringify(form.images || []));
