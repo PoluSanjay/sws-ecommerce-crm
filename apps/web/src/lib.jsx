@@ -22,11 +22,14 @@ export const api = async (path, options = {}) => {
   let data = {};
   try { data = raw ? JSON.parse(raw) : {}; } catch { data = { error: raw.slice(0, 300) }; }
   if (!response.ok) {
-    // Mongoose ValidationError -> surface the exact field(s) that failed.
-    const fieldErrors = data.errors && typeof data.errors === 'object'
-      ? Object.entries(data.errors).map(([field, info]) => `${field}: ${info?.message || info}`).join(', ')
+    // Surface the exact field(s) that failed, whatever shape the server uses.
+    const fromObject = source => source && typeof source === 'object'
+      ? (Array.isArray(source)
+          ? source.map(item => [item?.path || item?.param || item?.field, item?.msg || item?.message].filter(Boolean).join(': ')).filter(Boolean).join(', ')
+          : Object.entries(source).map(([field, info]) => `${field}: ${info?.message || info?.msg || info}`).join(', '))
       : '';
-    throw new Error(fieldErrors || data.error || data.message || `Request failed (${response.status})`);
+    const detail = fromObject(data.errors) || fromObject(data.details) || fromObject(data.issues) || '';
+    throw new Error([data.error || data.message, detail].filter(Boolean).join(' — ') || `Request failed (${response.status})`);
   }
   return data;
 };
