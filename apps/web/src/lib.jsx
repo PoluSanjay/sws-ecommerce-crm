@@ -65,8 +65,12 @@ export function ToastProvider({ children }) {
 }
 export const useToast = () => useContext(ToastContext);
 
-export function Logo({ compact = false }) {
-  return <div className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-black text-white shadow-lg shadow-blue-500/20">SWS</span>{!compact && <span className="leading-tight"><b className="block text-sm tracking-tight text-ink font-display">Sujala Water</b><span className="block text-[10px] font-semibold tracking-[.18em] text-brand-light">SOLUTIONS</span></span>}</div>;
+export const LOGO_URL = 'https://sujala-sws.lovable.app/__l5e/assets-v1/529ca140-c18d-4c04-9a92-a57b70cdac6b/sws-logo.png';
+export function Logo({ compact = false, size = 40 }) {
+  return <div className="flex items-center gap-2.5">
+    <img src={LOGO_URL} alt="Sujala Water Solutions logo" width={size} height={size} style={{ width: size, height: size }} className="rounded-full border border-line bg-white object-cover shadow-sm"/>
+    {!compact && <span className="leading-tight"><b className="font-display block text-base font-extrabold tracking-tight text-ink">SWS</b><span className="block text-[10px] font-semibold uppercase tracking-[.18em] text-brand-light">Sujala Water Solutions</span></span>}
+  </div>;
 }
 export function Spinner() { return <div className="grid min-h-48 place-items-center text-muted"><LoaderCircle className="animate-spin" size={28}/></div>; }
 export function Empty({ title = 'Nothing here yet', detail }) { return <div className="card grid min-h-40 place-items-center p-6 text-center"><Droplets className="mb-3 text-brand-light" size={28}/><b>{title}</b>{detail && <p className="mt-1 text-sm text-muted">{detail}</p>}</div>; }
