@@ -6,9 +6,28 @@ export const api = async (path, options = {}) => {
   const token = options.token ?? localStorage.getItem('sws_token');
   const headers = { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(options.headers || {}) };
   if (token) headers.Authorization = 'Bearer ' + token;
-  const response = await fetch(API_URL + path, { method: options.method || 'GET', headers, body: options.body instanceof FormData ? options.body : options.body ? JSON.stringify(options.body) : undefined });
-  const data = response.status === 204 ? null : await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || 'Something went wrong');
+  let response;
+  try {
+    response = await fetch(API_URL + path, {
+      method: options.method || 'GET',
+      headers,
+      credentials: 'include',
+      body: options.body instanceof FormData ? options.body : options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (networkError) {
+    // "Failed to fetch" = the API was never reached (server down, wrong VITE_API_URL, or CORS blocked).
+    throw new Error(`Cannot reach the API at ${API_URL}${path}. Check that the backend is running and that VITE_API_URL + CORS are configured.`);
+  }
+  const raw = response.status === 204 ? '' : await response.text();
+  let data = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch { data = { error: raw.slice(0, 300) }; }
+  if (!response.ok) {
+    // Mongoose ValidationError -> surface the exact field(s) that failed.
+    const fieldErrors = data.errors && typeof data.errors === 'object'
+      ? Object.entries(data.errors).map(([field, info]) => `${field}: ${info?.message || info}`).join(', ')
+      : '';
+    throw new Error(fieldErrors || data.error || data.message || `Request failed (${response.status})`);
+  }
   return data;
 };
 export const money = amount => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
