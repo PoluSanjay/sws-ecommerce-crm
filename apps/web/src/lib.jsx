@@ -66,7 +66,7 @@ export function ToastProvider({ children }) {
 export const useToast = () => useContext(ToastContext);
 
 export function Logo({ compact = false }) {
-  return <div className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-black text-white shadow-lg shadow-blue-500/20">SWS</span>{!compact && <span className="leading-tight"><b className="block text-sm tracking-tight text-white">Sujala Water</b><span className="block text-[10px] font-semibold tracking-[.18em] text-brand-light">SOLUTIONS</span></span>}</div>;
+  return <div className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-brand font-black text-white shadow-lg shadow-blue-500/20">SWS</span>{!compact && <span className="leading-tight"><b className="block text-sm tracking-tight text-ink font-display">Sujala Water</b><span className="block text-[10px] font-semibold tracking-[.18em] text-brand-light">SOLUTIONS</span></span>}</div>;
 }
 export function Spinner() { return <div className="grid min-h-48 place-items-center text-muted"><LoaderCircle className="animate-spin" size={28}/></div>; }
 export function Empty({ title = 'Nothing here yet', detail }) { return <div className="card grid min-h-40 place-items-center p-6 text-center"><Droplets className="mb-3 text-brand-light" size={28}/><b>{title}</b>{detail && <p className="mt-1 text-sm text-muted">{detail}</p>}</div>; }
@@ -78,5 +78,5 @@ export function Seo({ title, description }) {
   return null;
 }
 export function SectionTitle({ eyebrow, title, children }) {
-  return <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div>{eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}<h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h2></div>{children}</div>;
+  return <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div>{eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}<h2 className="font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">{title}</h2></div>{children}</div>;
 }
