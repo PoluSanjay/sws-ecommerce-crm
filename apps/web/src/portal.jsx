@@ -52,28 +52,37 @@ export function AdminProducts() {
   const save = event => {
     event.preventDefault();
     if (!form.name.trim() || String(form.price).trim() === '') { toast('Name and price are required'); return; }
-    const skip = ['_id','images','category_id','is_active','is_featured','created_at','updated_at','__v'];
     const numeric = ['price','discount_price','stock','rating'];
-    const body = new FormData();
+    const skip = ['_id','images','created_at','updated_at','__v','specifications'];
+    // Build a plain object first so we can send clean JSON when there is nothing to upload.
+    const payload = {};
     Object.entries(form).forEach(([key, value]) => {
       if (skip.includes(key)) return;
-      // Empty strings make Mongoose throw "validation failed" on Number/Date/ObjectId paths — omit them.
       if (value === '' || value === null || value === undefined) return;
-      if (numeric.includes(key)) {
-        const n = Number(value);
-        if (Number.isNaN(n)) return;
-        body.append(key, String(n));
-        return;
-      }
-      body.append(key, value);
+      if (numeric.includes(key)) { const n = Number(value); if (!Number.isNaN(n)) payload[key] = n; return; }
+      payload[key] = value;
     });
-    body.append('slug', form.slug || slugify(form.name));
-    // Only send category_id when one is actually picked; '' is not a valid ObjectId.
-    if (form.category_id) body.append('category_id', form.category_id);
-    body.append('is_active', String(form.is_active ?? true));
-    body.append('is_featured', String(form.is_featured ?? false));
-    body.append('existing_images', JSON.stringify(form.images || []));
-    [...files].forEach(file => body.append('images', file));
+    payload.slug = form.slug || slugify(form.name);
+    payload.is_active = form.is_active ?? true;
+    payload.is_featured = form.is_featured ?? false;
+    if (!form.category_id) delete payload.category_id;
+    // specifications is edited as JSON text; send an object, never a raw string.
+    if (form.specifications && String(form.specifications).trim()) {
+      try { payload.specifications = JSON.parse(form.specifications); }
+      catch { toast('Specifications must be valid JSON'); return; }
+    }
+    payload.existing_images = form.images || [];
+
+    let body;
+    if (files.length) {
+      body = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        body.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+      });
+      [...files].forEach(file => body.append('images', file));
+    } else {
+      body = payload; // JSON — works even if the server has no multipart parser on this route
+    }
     setSaving(true);
     action(() => api('/admin/products' + (form._id ? '/' + form._id : ''), { method: form._id ? 'PUT' : 'POST', body }), toast,
       () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); setForm(null); setFiles([]); }, form._id ? 'Product updated' : 'Product created')
