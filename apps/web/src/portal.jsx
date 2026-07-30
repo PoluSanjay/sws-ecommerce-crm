@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Check, ClipboardList, CreditCard, Package, Plus, Save, Settings, Users, Wrench, X } from 'lucide-react';
+import { BarChart3, Check, ClipboardList, CreditCard, ImageOff, LoaderCircle, Package, Pencil, Plus, Save, Settings, Trash2, Users, Wrench, X } from 'lucide-react';
 import { Empty, Seo, SectionTitle, Spinner, api, date, imageUrl, money, useAuth, useToast } from './lib.jsx';
 
 const get = (path, key) => useQuery({ queryKey: key || [path], queryFn: () => api(path) });
@@ -31,48 +31,127 @@ export function AdminDashboard() {
 function RecentOrders({ items }) { return <section className="card p-6"><div className="mb-4 flex justify-between"><h2 className="font-bold">Recent orders</h2><Link to="/admin/orders" className="text-sm text-brand-light">Manage</Link></div>{items.length ? <div className="grid gap-3">{items.map(item => <div className="flex items-center justify-between gap-3 border-b border-line pb-3 text-sm" key={item._id}><div><b>{item.order_number}</b><span className="ml-2 text-muted">{item.user_id?.full_name}</span></div><div className="text-right"><b>{money(item.total)}</b><span className="ml-2"><Status>{item.status}</Status></span></div></div>)}</div> : <Empty/>}</section>; }
 function RecentComplaints({ items }) { return <section className="card p-6"><div className="mb-4 flex justify-between"><h2 className="font-bold">Recent tickets</h2><Link to="/admin/complaints" className="text-sm text-brand-light">Manage</Link></div>{items.length ? <div className="grid gap-3">{items.map(item => <div className="flex items-center justify-between gap-3 border-b border-line pb-3 text-sm" key={item._id}><div><b>{item.ticket_number}</b><span className="ml-2 text-muted">{item.category}</span></div><Status>{item.status}</Status></div>)}</div> : <Empty/>}</section>; }
 
-const productBlank = { name: '', slug: '', description: '', price: '', discount_price: '', stock: '0', category_id: '', specifications: '{}' };
+const productBlank = { name: '', slug: '', brand: 'Sujala', description: '', price: '', discount_price: '', stock: '10', warranty: '1 Year', category_id: '', specifications: '{}', is_active: true, is_featured: false };
+const slugify = value => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
 export function AdminProducts() {
-  const queryClient = useQueryClient(); const toast = useToast(); const { data: productsData, isLoading } = get('/admin/products', ['admin-products']); const { data: categoriesData } = get('/categories', ['categories']); const [form, setForm] = useState(null); const [files, setFiles] = useState([]);
-  const edit = product => setForm(product ? { ...product, category_id: product.category_id?._id || product.category_id, specifications: JSON.stringify(product.specifications || {}, null, 2) } : productBlank);
-  const save = event => { event.preventDefault(); const body = new FormData(); Object.entries(form).forEach(([key,value]) => { if (key !== '_id' && key !== 'images' && key !== 'category_id' && key !== 'is_active') body.append(key, value ?? ''); }); body.append('category_id', form.category_id); body.append('is_active', String(form.is_active ?? true)); body.append('existing_images', JSON.stringify(form.images || [])); [...files].forEach(file => body.append('images', file)); action(() => api('/admin/products' + (form._id ? '/' + form._id : ''), { method: form._id ? 'PUT' : 'POST', body }), toast, () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); setForm(null); }, form._id ? 'Product updated' : 'Product created'); };
-  const remove = product => { if (confirm('Delete ' + product.name + '?')) action(() => api('/admin/products/' + product._id, { method: 'DELETE' }), toast, () => queryClient.invalidateQueries({ queryKey: ['admin-products'] }), 'Product deleted'); };
+  const queryClient = useQueryClient(); const toast = useToast();
+  const { data: productsData, isLoading } = get('/admin/products', ['admin-products']);
+  const { data: categoriesData } = get('/categories', ['categories']);
+  const [form, setForm] = useState(null); const [files, setFiles] = useState([]); const [saving, setSaving] = useState(false);
+  const products = productsData?.products || [];
+  const categories = categoriesData?.categories || [];
+
+  const edit = product => { setFiles([]); setForm(product ? { ...product, category_id: product.category_id?._id || product.category_id, specifications: JSON.stringify(product.specifications || {}, null, 2) } : productBlank); };
+  const setField = (key, value) => setForm(current => {
+    const next = { ...current, [key]: value };
+    if (key === 'name' && !current._id && (!current.slug || current.slug === slugify(current.name || ''))) next.slug = slugify(value);
+    return next;
+  });
+
+  const save = event => {
+    event.preventDefault();
+    if (!form.name.trim() || String(form.price).trim() === '') { toast('Name and price are required'); return; }
+    const body = new FormData();
+    Object.entries(form).forEach(([key, value]) => { if (!['_id','images','category_id','is_active','is_featured','created_at','updated_at','__v'].includes(key)) body.append(key, value ?? ''); });
+    body.append('slug', form.slug || slugify(form.name));
+    body.append('category_id', form.category_id || '');
+    body.append('is_active', String(form.is_active ?? true));
+    body.append('is_featured', String(form.is_featured ?? false));
+    body.append('existing_images', JSON.stringify(form.images || []));
+    [...files].forEach(file => body.append('images', file));
+    setSaving(true);
+    action(() => api('/admin/products' + (form._id ? '/' + form._id : ''), { method: form._id ? 'PUT' : 'POST', body }), toast,
+      () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); setForm(null); setFiles([]); }, form._id ? 'Product updated' : 'Product created')
+      .finally(() => setSaving(false));
+  };
+
+  const remove = product => { if (confirm('Delete "' + product.name + '"?')) action(() => api('/admin/products/' + product._id, { method: 'DELETE' }), toast, () => queryClient.invalidateQueries({ queryKey: ['admin-products'] }), 'Product deleted'); };
+
   return <div className="shell py-10">
-    <AdminTitle title="Products" detail="Manage your catalogue, stock and product images."/>
-    <div className="mb-5 flex justify-end"><button className="btn btn-primary" onClick={() => edit(null)}><Plus size={16}/>Add product</button></div>
+    <AdminTitle title="Edit products" detail="Use each product card's Edit button to change price, stock, image and details."/>
+    <div className="mb-6 flex justify-end"><button className="btn btn-primary" onClick={() => edit(null)}><Plus size={16}/>Add product</button></div>
+
+    {isLoading ? <Spinner/> : products.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {products.map(product => {
+        const price = product.discount_price ?? product.price;
+        const image = imageUrl(product.images?.[0]);
+        return <div key={product._id} className="card card-hover overflow-hidden">
+          <div className="aspect-square bg-mint">
+            {image ? <img src={image} alt={product.name} className="h-full w-full object-cover"/> : <div className="grid h-full place-items-center gap-2 text-muted"><ImageOff size={26}/><span className="text-xs">No image</span></div>}
+          </div>
+          <div className="p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="truncate font-semibold text-ink">{product.name}</div>
+                <div className="mt-0.5 text-xs text-muted">{product.brand || 'Sujala'} • {product.is_active === false ? 'Hidden' : 'Active'}{product.is_featured ? ' • Featured' : ''}</div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="font-bold text-brand">{money(price)}</div>
+                {product.discount_price != null && <div className="text-xs text-muted line-through">{money(product.price)}</div>}
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-muted">Stock: {product.stock ?? 0}</div>
+            <div className="mt-3 flex gap-2">
+              <button className="btn btn-secondary flex-1 px-3 py-2 text-xs" onClick={() => edit(product)}><Pencil size={14}/>Edit price / image</button>
+              <button className="btn btn-secondary px-3 py-2 text-xs text-red-700 hover:border-red-300 hover:bg-red-50" aria-label={'Delete ' + product.name} onClick={() => remove(product)}><Trash2 size={14}/></button>
+            </div>
+          </div>
+        </div>;
+      })}
+    </div> : <div className="empty-panel">No products yet. Click "Add product" to create your first one.</div>}
+
     {form && <div className="fixed inset-0 z-70 grid place-items-center overflow-y-auto p-4 py-8">
       <div className="absolute inset-0 bg-ink/50" onClick={() => setForm(null)}/>
-      <div className="card relative w-full max-w-2xl p-6 sm:p-8">
+      <form className="card relative max-h-[92vh] w-full max-w-2xl overflow-y-auto p-6 sm:p-8" onSubmit={save}>
         <div className="mb-6 flex items-center justify-between">
           <h2 className="font-display text-xl font-bold text-ink">{form._id ? 'Edit product' : 'Add product'}</h2>
-          <button onClick={() => setForm(null)} className="rounded-lg p-1.5 text-muted hover:bg-mint hover:text-ink"><X size={20}/></button>
+          <button type="button" onClick={() => setForm(null)} className="rounded-lg p-1.5 text-muted hover:bg-mint hover:text-ink"><X size={20}/></button>
         </div>
-        <form className="grid gap-5" onSubmit={save}>
-          <label className="label">Name *<input required className="input" placeholder="e.g. Aqua RO+UV 8L" value={form.name} onChange={event => setForm({ ...form, name: event.target.value })}/></label>
+
+        <div className="grid gap-4">
+          <label className="label">Name *<input required className="input" placeholder="e.g. Aqua RO+UV 8L" value={form.name} onChange={event => setField('name', event.target.value)}/></label>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="label">Slug (URL)<input required pattern="[a-z0-9-]+" className="input" placeholder="auto-generated" value={form.slug} onChange={event => setForm({ ...form, slug: event.target.value })}/></label>
-            <label className="label">Category<select required className="input" value={form.category_id} onChange={event => setForm({ ...form, category_id: event.target.value })}><option value="">Choose category</option>{categoriesData?.categories?.map(item => <option key={item._id} value={item._id}>{item.name}</option>)}</select></label>
+            <label className="label">Slug (URL)<input pattern="[a-z0-9-]+" className="input" placeholder="auto-generated" value={form.slug || ''} onChange={event => setField('slug', event.target.value)}/></label>
+            <label className="label">Brand<input className="input" value={form.brand || ''} onChange={event => setField('brand', event.target.value)}/></label>
           </div>
-          <label className="label">Description<textarea required className="input min-h-24" placeholder="What makes this product a good fit for customers." value={form.description} onChange={event => setForm({ ...form, description: event.target.value })}/></label>
+          <label className="label">Description<textarea rows="4" className="input" value={form.description || ''} onChange={event => setField('description', event.target.value)}/></label>
           <div className="grid gap-4 sm:grid-cols-3">
-            <label className="label">Price (₹) *<input required type="number" min="0" className="input" value={form.price} onChange={event => setForm({ ...form, price: event.target.value })}/></label>
-            <label className="label">Sale price (₹)<input type="number" min="0" className="input" placeholder="Optional" value={form.discount_price || ''} onChange={event => setForm({ ...form, discount_price: event.target.value })}/></label>
-            <label className="label">Stock<input required type="number" min="0" className="input" value={form.stock} onChange={event => setForm({ ...form, stock: event.target.value })}/></label>
+            <label className="label">Price (₹) *<input required type="number" step="0.01" className="input" value={form.price} onChange={event => setField('price', event.target.value)}/></label>
+            <label className="label">Sale price (₹)<input type="number" step="0.01" className="input" placeholder="Optional" value={form.discount_price ?? ''} onChange={event => setField('discount_price', event.target.value)}/></label>
+            <label className="label">Stock<input type="number" className="input" value={form.stock ?? 0} onChange={event => setField('stock', event.target.value)}/></label>
           </div>
-          <label className="label">Product images (up to 6){form.images?.length ? <div className="mb-1 flex flex-wrap gap-2">{form.images.map(image => <img key={image} src={imageUrl(image)} alt="" className="h-14 w-14 rounded-lg border border-line object-cover"/>)}</div> : null}<input multiple accept="image/png,image/jpeg,image/webp,image/gif" type="file" className="input" onChange={event => setFiles(event.target.files)}/></label>
-          <label className="label">Specifications (JSON)<textarea className="input min-h-24" value={form.specifications} onChange={event => setForm({ ...form, specifications: event.target.value })}/></label>
-          <label className="label">Active<select className="input" value={String(form.is_active ?? true)} onChange={event => setForm({ ...form, is_active: event.target.value === 'true' })}><option value="true">Visible on shop</option><option value="false">Hidden</option></select></label>
-          <div className="flex justify-end gap-3 border-t border-line pt-5">
-            <button type="button" className="btn btn-secondary" onClick={() => setForm(null)}>Cancel</button>
-            <button className="btn btn-primary"><Save size={16}/>{form._id ? 'Save changes' : 'Create product'}</button>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="label">Warranty<input className="input" placeholder="e.g. 1 Year" value={form.warranty || ''} onChange={event => setField('warranty', event.target.value)}/></label>
+            <label className="label">Category<select className="input" value={form.category_id || ''} onChange={event => setField('category_id', event.target.value)}><option value="">— None —</option>{categories.map(category => <option key={category._id} value={category._id}>{category.name}</option>)}</select></label>
           </div>
-        </form>
-      </div>
+
+          <div className="label">Images
+            <div className="flex items-start gap-3">
+              <div className="flex gap-2">
+                {(form.images || []).slice(0, 2).map(path => <div key={path} className="relative"><img src={imageUrl(path)} alt="" className="h-24 w-24 rounded-lg border border-line object-cover"/><button type="button" aria-label="Remove image" className="absolute -right-2 -top-2 rounded-full bg-white p-1 text-red-700 shadow" onClick={() => setForm({ ...form, images: form.images.filter(item => item !== path) })}><X size={12}/></button></div>)}
+              </div>
+              <div className="flex-1">
+                <label className="btn btn-secondary w-full cursor-pointer text-xs">{files.length ? files.length + ' file(s) selected' : 'Upload file'}<input type="file" accept="image/*" multiple className="hidden" onChange={event => setFiles(event.target.files)}/></label>
+                <p className="mt-2 text-xs text-muted">JPG or PNG, up to 5MB each. New uploads are added to the product gallery.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-6 text-sm">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={form.is_active ?? true} onChange={event => setField('is_active', event.target.checked)}/>Active (visible on shop)</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={form.is_featured ?? false} onChange={event => setField('is_featured', event.target.checked)}/>Featured (homepage)</label>
+          </div>
+        </div>
+
+        <div className="mt-7 flex justify-end gap-2">
+          <button type="button" className="btn btn-secondary" onClick={() => setForm(null)}>Cancel</button>
+          <button className="btn btn-primary" disabled={saving}>{saving ? <LoaderCircle className="animate-spin" size={16}/> : <Save size={16}/>}{form._id ? 'Save changes' : 'Create product'}</button>
+        </div>
+      </form>
     </div>}
-    {isLoading ? <Spinner/> : productsData?.products?.length ? <div className="card table-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>State</th><th/></tr></thead><tbody>{productsData.products.map(item => <tr key={item._id}><td className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center overflow-hidden rounded bg-slate-800">{item.images?.[0] ? <img className="h-full w-full object-cover" src={imageUrl(item.images[0])} alt=""/> : <Package size={16}/>}</div><b>{item.name}</b></td><td>{item.category_id?.name}</td><td>{money(item.discount_price ?? item.price)}</td><td>{item.stock}</td><td><Status>{item.is_active ? 'active' : 'hidden'}</Status></td><td><div className="flex gap-2"><button className="btn btn-secondary px-2 py-1 text-xs" onClick={() => edit(item)}>Edit</button><button className="btn btn-danger px-2 py-1 text-xs" onClick={() => remove(item)}>Delete</button></div></td></tr>)}</tbody></table></div> : <Empty title="No products yet" detail="Create your first SWS catalogue item."/ >}
   </div>;
 }
-
 export function AdminOrders() {
   const queryClient = useQueryClient(); const toast = useToast(); const { data, isLoading } = get('/admin/orders', ['admin-orders']);
   const update = (id, changes) => action(() => api('/admin/orders/' + id, { method: 'PATCH', body: changes }), toast, () => queryClient.invalidateQueries({ queryKey: ['admin-orders'] }), 'Order updated');
