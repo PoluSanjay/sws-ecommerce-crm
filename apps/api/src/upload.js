@@ -1,5 +1,5 @@
-import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary } from 'cloudinary';
+import multer from 'multer';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -7,47 +7,19 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Keep the file in memory only — never write to Render's ephemeral disk.
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024,
-  },
-  fileFilter: (_req, file, callback) => {
-    if (!file.mimetype.startsWith("image/")) {
-      callback(new Error("Only image files are allowed"));
-      return;
-    }
-
-    callback(null, true);
-  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, /^image\/(png|jpe?g|webp|avif|gif)$/.test(file.mimetype)),
 });
 
-export function uploadImageToCloudinary(fileBuffer, folder = "sws-products") {
+export function uploadBuffer(buffer, folder = 'sws') {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: "image",
-        transformation: [
-          {
-            quality: "auto",
-            fetch_format: "auto",
-          },
-        ],
-      },
-      (error, result) => {
-        if (error || !result) {
-          reject(error ?? new Error("Cloudinary upload failed"));
-          return;
-        }
-
-        resolve({
-          url: result.secure_url,
-          publicId: result.public_id,
-        });
-      },
+      { folder, resource_type: 'image' },
+      (err, result) => (err ? reject(err) : resolve(result.secure_url))
     );
-
-    stream.end(fileBuffer);
+    stream.end(buffer);
   });
 }
