@@ -32,3 +32,11 @@ const routeTree = rootRoute.addChildren([
 const router = createRouter({ routeTree, defaultPreload: 'intent' });
 
 ReactDOM.createRoot(document.getElementById('root')).render(<React.StrictMode><RouterProvider router={router}/></React.StrictMode>);
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
+      console.log("Service Worker registration failed:", err);
+    });
+  });
+}
+
