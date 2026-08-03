@@ -7,3 +7,4 @@ uploads/
 data/
 *.log
 coverage/
+apps/api/.env
