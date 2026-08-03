@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.sws_ecommerce_crm_web.twa",
+      "sha256_cert_fingerprints": ["3E737254ECB0D3A6A8F799FCB9C8EBB4E13791256BE7DBFC99ACAE0ADE81FAFB"]
+    }
+  }
+]
