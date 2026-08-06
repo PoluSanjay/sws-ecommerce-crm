@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "app.vercel.sws_ecommerce_crm_web.twa",
       "sha256_cert_fingerprints": [
-        "3E:73:72:54:EC:B0:D3:A6:A8:F7:99:FC:B9:C8:EB:B4:E1:37:91:25:6B:E7:DB:FC:99:AC:AE:0A:DE:81:FA:FB"
+        "3E:73:72:54:EC:B0:D3:A6:A8:F7:99:FC:B9:C8:EB:B4:E1:37:91:25:6B:E7:DB:FC:99:AC:AE:0A:DE:81:FA:FB",
+        "1A:CA:C1:6F:E3:27:89:A9:55:1B:BA:01:EE:46:3A:BF:98:E8:C7:26:F8:41:09:DD:A1:DD:11:69:BE:81:4F:08"
       ]
     }
   }
